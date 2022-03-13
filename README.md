@@ -60,6 +60,10 @@ definitely not look good!
 python main.py -i "output.rav" -o "output.mkv" -d
 ```
 
+The converter will leave lots of `temp.*` files behind, you can delete those.
+Make sure that there are no files named `temp` beause they will be overwritten 
+by FFmpeg!
+
 ## Format
 
 ### Quality
@@ -83,13 +87,14 @@ PCM audio and an JPEG image.
 
 A frame goes like this:
 
-| Byte offset        | Data type                                    | Description                                                                   |
-|--------------------|----------------------------------------------|-------------------------------------------------------------------------------|
-| 0 - 3              | Little endian `unsigned long`                | The frame number.                                                             |
-| 4 - 7              | Little endian `unsigned long`                | The length of the frame.                                                      |
-| 8 - 11             | Little endian `unsigned long`                | The length of the audio for the frame, should be 800 bytes.                   |
-| 12 - 811           | 800-byte-long block, `unsigned char`s        | The audio data itself.                                                        |
-| 812 - 815          | Little endian `unsigned long`                | The length of the JPEG image for the frame, a variable amount (usually ~1 kb) |
-| 816 - end of frame | Variable length byte block, `unsigned char`s | THe JPEG image itself.                                                        |
+| Byte offset                   | Data type                                    | Description                                                                                                                                                                                             |
+|-------------------------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| +4                            | Little endian `unsigned long`                | The frame number.                                                                                                                                                                                       |
+| +4                            | Little endian `unsigned long`                | The length of the frame.                                                                                                                                                                                |
+| +4                            | Little endian `unsigned long`                | The length of the audio for the frame, should be 800 bytes.                                                                                                                                             |
+| +800                          | 800-byte-long block, `unsigned char`s        | The audio data itself.                                                                                                                                                                                  |
+| +4                            | Little endian `unsigned long`                | The length of the JPEG image for the frame, a variable amount (usually ~1 kb)                                                                                                                           |
+| +JPEG image length from above | Variable length byte block, `unsigned char`s | The JPEG image itself.                                                                                                                                                                                  |
+| +4                            | Little endian `unsigned long`                | The length of the frame, useful for seeking backwards. Note that after seeking backwards this many bytes, you will also have to seek 8 more bytes back for the original frame length and frame counter! |
 
 Then the next frame begins, and repeat until EOF.

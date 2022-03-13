@@ -100,6 +100,7 @@ if encode:
                 segment_buffer.write(pack("<L", audio_length + video_length))
                 segment_buffer.write(audio_buffer.read())
                 segment_buffer.write(video_buffer.read())
+                segment_buffer.write(pack("<L", audio_length + video_length))
 
                 print(f"Frame #{frame} "
                       f"segment: {segment_buffer.tell()} "
@@ -133,6 +134,10 @@ else:
 
                 image_length = unpack("<L", original.read(4))[0]
                 image = original.read(image_length)
+
+                end_segment_length = unpack("<L", original.read(4))[0]
+
+                assert segment_length == end_segment_length
 
                 temp_audio.write(audio)
                 temp_video.append_data(imread(image, "jpg"))
