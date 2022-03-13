@@ -13,7 +13,7 @@ parser.add_argument("-i", "--input", type=Path, required=True, dest="input",
 parser.add_argument("-o", "--output", type=Path, dest="output", default=None,
                     help="The output path.")
 parser.add_argument("-d", "--decode", action="store_true",
-                    help="Turn a RAV file into an MP4 file")
+                    help="Turn a RAV file back into a standard media file")
 args = parser.parse_args()
 
 encode = not args.decode
