@@ -6,10 +6,12 @@ from subprocess import run
 
 from imageio import get_reader, get_writer, imread, imwrite
 
-parser = ArgumentParser(description="Converts video files to Raw Audio Video "
-                                    "(RAV) files.")
-parser.add_argument("path", type=Path,
-                    help="The path to the video file.")
+parser = ArgumentParser(description="Encodes/decodes Raw Audio Video (RAV) "
+                                    "files.")
+parser.add_argument("-i", "--input", type=Path, required=True, dest="input",
+                    help="The input video file, for encoding/decoding.")
+parser.add_argument("-o", "--output", type=Path, dest="output", default=None,
+                    help="The output path.")
 parser.add_argument("-d", "--decode", action="store_true",
                     help="Turn a RAV file into an MP4 file")
 args = parser.parse_args()
@@ -23,8 +25,13 @@ audio_sample_rate = 8000
 video_fps = 10
 video_width = 160
 
-original_path = args.path.expanduser().resolve()
+original_path = args.input.expanduser().resolve()
 print(f"Video path: {original_path}")
+
+if args.output is None:
+    output_path = original_path.with_suffix(".rav")
+else:
+    output_path = args.output
 
 if encode:
     print("Encoding video")
@@ -50,7 +57,7 @@ if encode:
     run(command, shell=True, check=True)
 
     print("Encoding RAV file")
-    output_path = original_path.parent / "output.rav"
+
     print(f"Output path: {output_path}")
 
     with output_path.open("wb") as output:
@@ -146,7 +153,8 @@ else:
     print(f"Running command \"{command}\"")
     run(command, shell=True, check=True)
 
-    output_path = original_path.parent / "output.mkv"
+    print(f"Output path: {output_path}")
+
     command = f"ffmpeg -y " \
               f"-i \"{str(video_path)}\" " \
               f"-i \"{str(wav_audio_path)}\" " \
