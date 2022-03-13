@@ -1,10 +1,10 @@
 from argparse import ArgumentParser
 from io import BytesIO
 from pathlib import Path
-from struct import pack
+from struct import pack, unpack, error as StructError
 from subprocess import run
 
-from imageio import get_reader, imwrite
+from imageio import get_reader, get_writer, imread, imwrite
 
 parser = ArgumentParser(description="Converts video files to Raw Audio Video "
                                     "(RAV) files.")
@@ -23,11 +23,11 @@ audio_sample_rate = 8000
 video_fps = 10
 video_width = 160
 
-if encode:
-    print(f"Encoding video")
+original_path = args.path.expanduser().resolve()
+print(f"Video path: {original_path}")
 
-    original_path = args.path.expanduser().resolve()
-    print(f"Video path: {original_path}")
+if encode:
+    print("Encoding video")
 
     print("Converting audio")
     audio_path = original_path.parent / "temp.pcm"
@@ -50,7 +50,7 @@ if encode:
     run(command, shell=True, check=True)
 
     print("Encoding RAV file")
-    output_path = original_path.with_suffix(".rav")
+    output_path = original_path.parent / "output.rav"
     print(f"Output path: {output_path}")
 
     with output_path.open("wb") as output:
@@ -58,9 +58,9 @@ if encode:
         with audio_path.open("rb") as audio, \
              get_reader(str(video_path)) as video:
             while True:
-                segment_len = int(audio_sample_rate / video_fps)
+                segment_length = int(audio_sample_rate / video_fps)
 
-                audio_segment = audio.read(segment_len)
+                audio_segment = audio.read(segment_length)
                 audio_length = len(audio_segment)
 
                 if audio_length == 0:
@@ -89,15 +89,67 @@ if encode:
                 video_buffer.seek(0)
 
                 segment_buffer = BytesIO()
+                segment_buffer.write(pack("<L", frame))
                 segment_buffer.write(pack("<L", audio_length + video_length))
                 segment_buffer.write(audio_buffer.read())
                 segment_buffer.write(video_buffer.read())
 
-                print(f"Frame #{frame} length: {segment_buffer.tell()}")
+                print(f"Frame #{frame} "
+                      f"segment: {segment_buffer.tell()} "
+                      f"audio: {audio_length} "
+                      f"video: {video_length}")
 
                 segment_buffer.seek(0)
 
-                output.write(pack("<L", frame))
                 output.write(segment_buffer.read())
 
                 frame += 1
+else:
+    print("Decoding video")
+
+    print("Decoding streams")
+    audio_path = original_path.parent / "temp.pcm"
+    video_path = original_path.parent / "temp.mp4"
+    with original_path.open("rb") as original:
+        with audio_path.open("wb") as temp_audio, \
+                get_writer(str(video_path), fps=video_fps) as temp_video:
+            while True:
+                try:
+                    frame = unpack("<L", original.read(4))[0]
+                except StructError:
+                    print("End of stream")
+                    break
+                segment_length = unpack("<L", original.read(4))[0]
+
+                audio_length = unpack("<L", original.read(4))[0]
+                audio = original.read(audio_length)
+
+                image_length = unpack("<L", original.read(4))[0]
+                image = original.read(image_length)
+
+                temp_audio.write(audio)
+                temp_video.append_data(imread(image, "jpg"))
+
+                print(f"Frame #{frame} "
+                      f"segment: {segment_length} "
+                      f"audio: {audio_length} "
+                      f"video: {image_length}")
+
+    print("Merging streams")
+
+    wav_audio_path = audio_path.with_suffix(".wav")
+
+    command = f"ffmpeg -y " \
+              f"-f u8 -ac {audio_channels} -ar {audio_sample_rate} " \
+              f"-i \"{str(audio_path)}\" " \
+              f"\"{str(wav_audio_path)}\""
+    print(f"Running command \"{command}\"")
+    run(command, shell=True, check=True)
+
+    output_path = original_path.parent / "output.mkv"
+    command = f"ffmpeg -y " \
+              f"-i \"{str(video_path)}\" " \
+              f"-i \"{str(wav_audio_path)}\" " \
+              f"\"{str(output_path)}\""
+    print(f"Running command \"{command}\"")
+    run(command, shell=True, check=True)
