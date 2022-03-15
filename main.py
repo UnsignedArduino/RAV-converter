@@ -21,7 +21,7 @@ encode = not args.decode
 # Charles
 
 audio_channels = 1
-audio_sample_rate = 8000
+audio_sample_rate = 16000
 video_fps = 10
 video_width = 160
 

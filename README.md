@@ -71,7 +71,7 @@ by FFmpeg!
 RAV files carry:
 - Audio
   - 8 bit samples
-  - 8 khz sampling rate
+  - 16 khz sampling rate
   - 1 channel
 - Video
   - 10 FPS
@@ -91,8 +91,8 @@ A frame goes like this:
 |-------------------------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | +4                            | Little endian `unsigned long`                | The frame number.                                                                                                                                                                                       |
 | +4                            | Little endian `unsigned long`                | The length of the frame.                                                                                                                                                                                |
-| +4                            | Little endian `unsigned long`                | The length of the audio for the frame, should be 800 bytes.                                                                                                                                             |
-| +800                          | 800-byte-long block, `unsigned char`s        | The audio data itself.                                                                                                                                                                                  |
+| +4                            | Little endian `unsigned long`                | The length of the audio for the frame, should be 16000 bytes.                                                                                                                                           |
+| +16000                        | 16000-byte-long block, `unsigned char`s      | The audio data itself.                                                                                                                                                                                  |
 | +4                            | Little endian `unsigned long`                | The length of the JPEG image for the frame, a variable amount (usually ~1 kb)                                                                                                                           |
 | +JPEG image length from above | Variable length byte block, `unsigned char`s | The JPEG image itself.                                                                                                                                                                                  |
 | +4                            | Little endian `unsigned long`                | The length of the frame, useful for seeking backwards. Note that after seeking backwards this many bytes, you will also have to seek 8 more bytes back for the original frame length and frame counter! |
