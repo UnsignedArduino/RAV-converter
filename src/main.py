@@ -55,7 +55,7 @@ if encode:
         f'"{str(audio_path)}"'
     )
     print(f'Running command: "{command}"')
-    # run(command, shell=True, check=True)
+    run(command, shell=True, check=True)
 
     print(f"Quantifying video")
     video_path = original_path.parent / "temp.mp4"
@@ -67,7 +67,7 @@ if encode:
         f'"{str(video_path)}"'
     )
     print(f'Running command: "{command}"')
-    # run(command, shell=True, check=True)
+    run(command, shell=True, check=True)
 
     print("Encoding RAV file")
 
@@ -109,7 +109,7 @@ if encode:
                 B5 = (image_frame[..., 2] >> 3).astype(np.uint16)
                 image_block = (R5 | G6 | B5).flatten()
                 # imwrite(image_buffer, image_frame, "jpg")
-                image_buffer.write(pack(f"<{160*90}H", *image_block))
+                image_buffer.write(pack(f"<{video_width*video_height}H", *image_block))
 
                 video_length = image_buffer.tell()
                 image_buffer.seek(0)
