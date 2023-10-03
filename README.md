@@ -60,10 +60,6 @@ definitely not look good!
 python main.py -i "output.rav" -o "output.mkv" -d
 ```
 
-The converter will leave lots of `temp.*` files behind, you can delete those.
-Make sure that there are no files named `temp` beause they will be overwritten
-by FFmpeg!
-
 ## Format
 
 ### Quality
@@ -72,11 +68,10 @@ RAV files carry:
 
 - Audio
     - 8 bit samples
-    - 16 khz sampling rate
+    - 32 khz sampling rate
     - 1 channel
 - Video
     - 10 FPS
-    - 160x(auto-calculated) frame size
     - RGB565 bitmap images
 
 Impressive quality, right?
@@ -85,14 +80,14 @@ Impressive quality, right?
 
 The header is like this:
 
-| File position | Data type                     | Description                            |
-|---------------|-------------------------------|----------------------------------------|
-| 0             | Little endian `unsigned long` | Number of frames.                      |
-| 4             | Byte                          | Audio sample size, should equal 8.     |
-| 5             | Little endian `unsigned long` | Audio sample rate, should equal 16000. |
-| 9             | Byte                          | FPS, should equal 10.                  |
-| 10            | Little endian `unsigned int`  | Frame width.                           |
-| 12            | Little endian `unsigned int`  | Frame height.                          |
+| File position | Data type                     | Description                                  |
+|---------------|-------------------------------|----------------------------------------------|
+| 0             | Little endian `unsigned long` | Number of frames.                            |
+| 4             | Byte                          | Audio sample size, (in bits) should equal 8. |
+| 5             | Little endian `unsigned long` | Audio sample rate, should equal 32000.       |
+| 9             | Byte                          | FPS, should equal 10.                        |
+| 10            | Little endian `unsigned int`  | Frame width.                                 |
+| 12            | Little endian `unsigned int`  | Frame height.                                |
 
 The majority of the file is composed of frames, which last 100 ms (10 FPS) and
 includes PCM audio and a RGB565 TFT blast-able bitmap.
@@ -104,7 +99,7 @@ A frame goes like this:
 | +4                       | Little endian `unsigned long`               | The frame number.                                                                                                                                                                                       |
 | +4                       | Little endian `unsigned long`               | The length of the frame.                                                                                                                                                                                |
 | +4                       | Little endian `unsigned long`               | The length of the audio for the frame, should be 16000 bytes.                                                                                                                                           |
-| +16000                   | 16000-byte-long block, `unsigned char`s     | The audio data itself.                                                                                                                                                                                  |
+| +32000                   | 32000-byte-long block, `unsigned char`s     | The audio data itself.                                                                                                                                                                                  |
 | +4                       | Little endian `unsigned long`               | The length of the bitmap image for the frame, a variable amount.                                                                                                                                        |
 | +Image length from above | Variable length byte block, `unsigned int`s | The bitmap image itself.                                                                                                                                                                                |
 | +4                       | Little endian `unsigned long`               | The length of the frame, useful for seeking backwards. Note that after seeking backwards this many bytes, you will also have to seek 8 more bytes back for the original frame length and frame counter! |

@@ -3,11 +3,12 @@ from io import BytesIO
 from pathlib import Path
 from struct import error as StructError, pack, unpack
 from subprocess import run
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 from imageio import get_reader, get_writer
 
-parser = ArgumentParser(description="Encodes/decodes Raw Audio Video (RAV) " "files.")
+parser = ArgumentParser(description="Encodes/decodes Raw Audio Video (RAV) files.")
 parser.add_argument(
     "-i",
     "--input",
@@ -30,23 +31,31 @@ args = parser.parse_args()
 encode = not args.decode
 
 audio_channels = 1
-audio_sample_rate = 16000
+audio_sample_rate = 32000
 video_fps = 10
 video_width = 160
 
 original_path = args.input.expanduser().resolve()
 print(f"Video path: {original_path}")
 
-if args.output is None:
-    output_path = original_path.with_suffix(".rav")
+if encode:
+    if args.output is None:
+        output_path = original_path.with_suffix(".rav")
+    else:
+        output_path = args.output
 else:
-    output_path = args.output
+    if args.output is None:
+        output_path = original_path.with_suffix(".mkv")
+    else:
+        output_path = args.output
 
 if encode:
     print("Encoding video")
 
     print("Converting audio")
-    audio_path = original_path.parent / "temp.pcm"
+    temp_video_file = NamedTemporaryFile(suffix=".pcm", delete=False)
+    audio_path = Path(temp_video_file.name)
+    temp_video_file.close()
 
     command = (
         f"ffmpeg -y -i "
@@ -58,7 +67,9 @@ if encode:
     run(command, shell=True, check=True)
 
     print(f"Quantifying video")
-    video_path = original_path.parent / "temp.mp4"
+    temp_video_file = NamedTemporaryFile(suffix=".mp4", delete=False)
+    video_path = Path(temp_video_file.name)
+    temp_video_file.close()
 
     command = (
         f"ffmpeg -y -i "
@@ -78,8 +89,8 @@ if encode:
     with output_path.open("wb") as output:
         output.write(pack("<L", 0))  # Frame count, to be written later
         output.write(pack("B", 8))
-        output.write(pack("<L", 16000))
-        output.write(pack("B", 10))
+        output.write(pack("<L", audio_sample_rate))
+        output.write(pack("B", video_fps))
         output.write(pack("<H", video_width))
         output.write(pack("<H", 0))  # Frame height, to be written later
         frame = 0
@@ -148,12 +159,19 @@ if encode:
         output.write(pack("<L", frame + 1))
         output.seek(12)
         output.write(pack("<H", video_height))
+
+    audio_path.unlink(missing_ok=True)
+    video_path.unlink(missing_ok=True)
 else:
     print("Decoding video")
 
     print("Decoding streams")
-    audio_path = original_path.parent / "temp.pcm"
-    video_path = original_path.parent / "temp.mp4"
+    temp_audio_file = NamedTemporaryFile(suffix=".pcm", delete=False)
+    audio_path = Path(temp_audio_file.name)
+    temp_audio_file.close()
+    temp_video_file = NamedTemporaryFile(suffix=".mp4", delete=False)
+    video_path = Path(temp_video_file.name)
+    temp_video_file.close()
     with original_path.open("rb") as original:
         frame_count = unpack("<L", original.read(4))[0]
         sample_size = unpack("B", original.read(1))[0]
@@ -235,3 +253,6 @@ else:
     )
     print(f'Running command "{command}"')
     run(command, shell=True, check=True)
+
+    audio_path.unlink(missing_ok=True)
+    video_path.unlink(missing_ok=True)
